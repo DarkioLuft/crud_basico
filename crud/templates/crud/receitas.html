@@ -1,0 +1,17 @@
+{% extends './base.html' %}
+
+{% block title %}Gerenciar Receita{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Gerenciar Receita</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        
+        <div class="actions" style="margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary">Salvar Receita</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

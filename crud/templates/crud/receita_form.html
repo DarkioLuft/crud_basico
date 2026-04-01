@@ -1,0 +1,19 @@
+{% extends './base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Nova{% endif %} Receita{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>{% if object %}Editar Receita{% else %}Nova Receita{% endif %}</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">Salvar Receita</button>
+            <a href="{% url 'receita_list' %}" class="btn btn-outline">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

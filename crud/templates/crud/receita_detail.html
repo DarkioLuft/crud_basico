@@ -1,0 +1,32 @@
+{% extends './base.html' %}
+
+{% block title %}{{ receita.nome }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 style="color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">
+        {{ receita.nome }}
+    </h1>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+        <p><strong>Tipo:</strong> {{ receita.tipo_receita }}</p>
+        <p><strong>Custo:</strong> <span style="color: var(--primary-hover); font-weight: bold;">R$ {{ receita.custo }}</span></p>
+        <p><strong>Criada em:</strong> {{ receita.data_criacao|date:"d/m/Y" }}</p>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+    <h3 style="color: var(--text-muted); font-size: 1.1rem;">Descrição:</h3>
+    <p style="background: var(--bg-color); padding: 1rem; border-radius: 8px;">{{ receita.descricao }}</p>
+
+    <h3 style="color: var(--text-muted); font-size: 1.1rem; margin-top: 1.5rem;">Ingredientes:</h3>
+    <p style="background: var(--bg-color); padding: 1rem; border-radius: 8px;">{{ receita.ingredientes|linebreaksbr }}</p>
+
+    <div class="actions">
+        <a href="{% url 'receita_update' receita.pk %}" class="btn btn-primary">Editar Receita</a>
+        <a href="{% url 'receita_delete' receita.pk %}" class="btn btn-danger">Deletar</a>
+        <span style="flex-grow: 1;"></span>
+        <a href="{% url 'receita_list' %}" class="btn btn-outline">Voltar para lista</a>
+    </div>
+</div>
+{% endblock %}

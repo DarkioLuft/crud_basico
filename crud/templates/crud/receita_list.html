@@ -1,0 +1,33 @@
+{% extends './base.html' %}
+
+{% block title %}Minhas Receitas{% endblock %}
+
+{% block content %}
+<div class="header-bar">
+    <div>
+        <strong>Olá, {{ user.username }}!</strong>
+    </div>
+    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.9rem;">Sair</button>
+    </form>
+</div>
+
+<div class="header-bar" style="background: transparent; box-shadow: none; padding: 0; margin-bottom: 1rem;">
+    <h1 style="margin: 0;">Minhas Receitas</h1>
+    <a href="{% url 'receita_create' %}" class="btn btn-primary">+ Nova Receita</a>
+</div>
+
+<div class="card">
+    <ul class="recipe-list">
+        {% for receita in receitas %}
+            <li>
+                <a href="{% url 'receita_detail' receita.pk %}" class="recipe-title">{{ receita.nome }}</a> 
+                <span class="recipe-price">R$ {{ receita.custo }}</span>
+            </li>
+        {% empty %}
+            <li style="color: var(--text-muted); justify-content: center;">Nenhuma receita cadastrada ainda.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

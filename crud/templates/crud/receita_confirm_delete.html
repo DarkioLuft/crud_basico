@@ -1,0 +1,20 @@
+{% extends './base.html' %}
+
+{% block title %}Confirmar Exclusão{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; border-top: 4px solid var(--danger-color);">
+    <h1 style="color: var(--danger-color);">Confirmar Exclusão</h1>
+    
+    <p style="font-size: 1.1rem; margin: 1.5rem 0;">
+        Você tem certeza que deseja deletar a receita <strong>"{{ receita.nome }}"</strong>?<br>
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Esta ação não poderá ser desfeita.</span>
+    </p>
+    
+    <form method="post" class="actions" style="justify-content: center;">
+        {% csrf_token %}
+        <a href="{% url 'receita_detail' receita.pk %}" class="btn btn-outline">Cancelar</a>
+        <button type="submit" class="btn btn-danger">Sim, deletar permanentemente</button>
+    </form>
+</div>
+{% endblock %}
