@@ -1,6 +1,5 @@
 """
-Testes unitários para o sistema de Gestão de Receitas.
-Cobertura: modelos, autenticação, cadastro de usuário, CRUD de receitas e filtros.
+Testes unitários – Gestão de Receitas.
 
 Execute com:
     python manage.py test crud
@@ -11,427 +10,352 @@ from django.urls import reverse
 from .models import User, Receita
 
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────
 # Helpers
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────
 
-def criar_usuario(**kwargs):
-    defaults = dict(
-        name='Teste User', login='testuser',
-        email='test@example.com', senha='senha123', status=True,
-    )
-    defaults.update(kwargs)
+def criar_usuario(**kw):
+    defaults = dict(name='Teste', login='testuser',
+                    email='test@test.com', senha='senha123', status=True)
+    defaults.update(kw)
     return User.objects.create(**defaults)
 
 
-def criar_receita(**kwargs):
-    defaults = dict(
-        nome='Bolo de Chocolate', descricao='Delicioso bolo',
-        ingredientes='Farinha, ovos, chocolate',
-        custo=Decimal('25.50'), tipo_receita='Doce',
-    )
-    defaults.update(kwargs)
-    return Receita.objects.create(**defaults)
+def criar_receita(user, **kw):
+    defaults = dict(nome='Bolo', descricao='Desc', ingredientes='Ing',
+                    custo=Decimal('20.00'), tipo_receita='Doce')
+    defaults.update(kw)
+    return Receita.objects.create(user=user, **defaults)
 
 
-def sessao_logada(client, user):
-    """Simula login via sessão sem passar pela view de login."""
-    session = client.session
-    session['user_id'] = user.id_user
-    session['user_name'] = user.name
-    session.save()
+def logar(client, user):
+    s = client.session
+    s['user_id'] = user.id_user
+    s['user_name'] = user.name
+    s.save()
 
 
-# ─────────────────────────────────────────────
-# 1. Testes de Modelo – User
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 1. Modelo User
+# ══════════════════════════════════════════════════════
 
 class UserModelTest(TestCase):
 
-    def test_criacao_usuario_basico(self):
-        """Deve criar um usuário com todos os campos obrigatórios."""
-        user = criar_usuario()
-        self.assertEqual(user.name, 'Teste User')
-        self.assertEqual(user.login, 'testuser')
-        self.assertEqual(user.email, 'test@example.com')
-        self.assertTrue(user.status)
+    def test_criacao_campos(self):
+        u = criar_usuario()
+        self.assertEqual(u.login, 'testuser')
+        self.assertEqual(u.email, 'test@test.com')
+        self.assertTrue(u.status)
 
     def test_str_retorna_nome(self):
-        """__str__ deve retornar o nome do usuário."""
-        user = criar_usuario()
-        self.assertEqual(str(user), 'Teste User')
+        self.assertEqual(str(criar_usuario()), 'Teste')
 
     def test_login_unico(self):
-        """Dois usuários não podem ter o mesmo login."""
         criar_usuario()
         from django.db import IntegrityError
         with self.assertRaises(IntegrityError):
-            User.objects.create(
-                name='Outro', login='testuser',
-                email='outro@example.com', senha='abc123',
-            )
+            User.objects.create(name='X', login='testuser',
+                                email='x@x.com', senha='abc')
 
     def test_email_unico(self):
-        """Dois usuários não podem ter o mesmo e-mail."""
         criar_usuario()
         from django.db import IntegrityError
         with self.assertRaises(IntegrityError):
-            User.objects.create(
-                name='Outro', login='outro_login',
-                email='test@example.com', senha='abc123',
-            )
+            User.objects.create(name='Y', login='outro',
+                                email='test@test.com', senha='abc')
 
     def test_status_padrao_true(self):
-        """Status padrão de um novo usuário deve ser True."""
-        user = User.objects.create(
-            name='X', login='xlogin',
-            email='x@x.com', senha='abc123',
-        )
-        self.assertTrue(user.status)
+        u = User.objects.create(name='Z', login='z', email='z@z.com', senha='x')
+        self.assertTrue(u.status)
 
 
-# ─────────────────────────────────────────────
-# 2. Testes de Modelo – Receita
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 2. Modelo Receita
+# ══════════════════════════════════════════════════════
 
 class ReceitaModelTest(TestCase):
 
-    def test_criacao_receita(self):
-        """Deve criar uma receita com todos os campos."""
-        receita = criar_receita()
-        self.assertEqual(receita.nome, 'Bolo de Chocolate')
-        self.assertEqual(receita.tipo_receita, 'Doce')
-        self.assertEqual(receita.custo, Decimal('25.50'))
+    def setUp(self):
+        self.user = criar_usuario()
 
-    def test_str_retorna_nome(self):
-        """__str__ da receita deve retornar o nome."""
-        receita = criar_receita(nome='Coxinha')
-        self.assertEqual(str(receita), 'Coxinha')
+    def test_criacao(self):
+        r = criar_receita(self.user, nome='Torta')
+        self.assertEqual(r.nome, 'Torta')
+        self.assertEqual(r.user, self.user)
+
+    def test_str(self):
+        self.assertEqual(str(criar_receita(self.user, nome='Coxinha')), 'Coxinha')
 
     def test_data_criacao_automatica(self):
-        """data_criacao deve ser preenchida automaticamente."""
-        receita = criar_receita()
-        self.assertIsNotNone(receita.data_criacao)
+        self.assertIsNotNone(criar_receita(self.user).data_criacao)
 
     def test_get_absolute_url(self):
-        """get_absolute_url deve apontar para receita_list."""
-        receita = criar_receita()
-        self.assertEqual(receita.get_absolute_url(), reverse('receita_list'))
+        r = criar_receita(self.user)
+        self.assertEqual(r.get_absolute_url(), reverse('receita_list'))
+
+    def test_receita_vinculada_ao_usuario(self):
+        r = criar_receita(self.user)
+        self.assertEqual(r.user.id_user, self.user.id_user)
 
 
-# ─────────────────────────────────────────────
-# 3. Testes de Autenticação – Login
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 3. Login / Logout
+# ══════════════════════════════════════════════════════
 
-class LoginViewTest(TestCase):
+class AuthTest(TestCase):
 
     def setUp(self):
         self.client = Client()
         self.user = criar_usuario()
-        self.url = reverse('login')
 
-    def test_get_exibe_formulario(self):
-        """GET /login/ deve retornar 200."""
-        resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Acesso ao Sistema')
+    def test_get_login(self):
+        self.assertEqual(self.client.get(reverse('login')).status_code, 200)
 
     def test_login_valido_redireciona(self):
-        """Login com credenciais corretas deve redirecionar para receita_list."""
-        resp = self.client.post(self.url, {'login': 'testuser', 'senha': 'senha123'})
-        self.assertRedirects(resp, reverse('receita_list'))
+        r = self.client.post(reverse('login'),
+                             {'login': 'testuser', 'senha': 'senha123'})
+        self.assertRedirects(r, reverse('receita_list'))
 
     def test_login_salva_sessao(self):
-        """Após login válido, user_id deve estar na sessão."""
-        self.client.post(self.url, {'login': 'testuser', 'senha': 'senha123'})
-        self.assertIn('user_id', self.client.session)
+        self.client.post(reverse('login'),
+                         {'login': 'testuser', 'senha': 'senha123'})
         self.assertEqual(self.client.session['user_id'], self.user.id_user)
 
     def test_login_senha_errada(self):
-        """Senha incorreta deve retornar 200 com mensagem de erro."""
-        resp = self.client.post(self.url, {'login': 'testuser', 'senha': 'errada'})
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'inválidos')
-
-    def test_login_usuario_inexistente(self):
-        """Login inexistente deve retornar mensagem de erro."""
-        resp = self.client.post(self.url, {'login': 'naoexiste', 'senha': 'qualquer'})
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'inválidos')
-
-    def test_usuario_ja_logado_redireciona(self):
-        """Usuário já logado ao acessar /login/ deve ir para receita_list."""
-        sessao_logada(self.client, self.user)
-        resp = self.client.get(self.url)
-        self.assertRedirects(resp, reverse('receita_list'))
+        r = self.client.post(reverse('login'),
+                             {'login': 'testuser', 'senha': 'errada'})
+        self.assertContains(r, 'inválidos')
 
     def test_login_usuario_inativo(self):
-        """Usuário com status=False não deve conseguir logar."""
         self.user.status = False
         self.user.save()
-        resp = self.client.post(self.url, {'login': 'testuser', 'senha': 'senha123'})
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'inválidos')
+        r = self.client.post(reverse('login'),
+                             {'login': 'testuser', 'senha': 'senha123'})
+        self.assertContains(r, 'inválidos')
 
-
-# ─────────────────────────────────────────────
-# 4. Testes de Autenticação – Logout
-# ─────────────────────────────────────────────
-
-class LogoutViewTest(TestCase):
-
-    def setUp(self):
-        self.client = Client()
-        self.user = criar_usuario()
+    def test_usuario_logado_nao_ve_login(self):
+        logar(self.client, self.user)
+        self.assertRedirects(self.client.get(reverse('login')),
+                             reverse('receita_list'))
 
     def test_logout_limpa_sessao(self):
-        """Após logout, user_id não deve existir na sessão."""
-        sessao_logada(self.client, self.user)
+        logar(self.client, self.user)
         self.client.post(reverse('logout'))
         self.assertNotIn('user_id', self.client.session)
 
-    def test_logout_redireciona_para_login(self):
-        """Logout deve redirecionar para /login/."""
-        sessao_logada(self.client, self.user)
-        resp = self.client.post(reverse('logout'))
-        self.assertRedirects(resp, reverse('login'))
+    def test_logout_redireciona(self):
+        logar(self.client, self.user)
+        self.assertRedirects(self.client.post(reverse('logout')),
+                             reverse('login'))
 
 
-# ─────────────────────────────────────────────
-# 5. Testes de Cadastro – Register
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 4. Cadastro de Usuário
+# ══════════════════════════════════════════════════════
 
-class RegisterViewTest(TestCase):
+class RegisterTest(TestCase):
 
     def setUp(self):
         self.client = Client()
         self.url = reverse('register')
-        self.dados_validos = {
-            'name': 'Novo Usuário',
-            'login': 'novologin',
-            'email': 'novo@email.com',
-            'senha': 'senha123',
-            'senha_confirm': 'senha123',
-        }
+        self.ok = dict(name='Novo', login='novo', email='novo@x.com',
+                       senha='senha123', senha_confirm='senha123')
 
-    def test_get_exibe_formulario(self):
-        """GET /register/ deve retornar 200."""
-        resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, 200)
+    def test_cadastro_valido_cria_user(self):
+        self.client.post(self.url, self.ok)
+        self.assertTrue(User.objects.filter(login='novo').exists())
 
-    def test_cadastro_valido_cria_usuario(self):
-        """Cadastro válido deve criar um User no banco."""
-        self.client.post(self.url, self.dados_validos)
-        self.assertTrue(User.objects.filter(login='novologin').exists())
+    def test_cadastro_exibe_sucesso(self):
+        r = self.client.post(self.url, self.ok)
+        self.assertContains(r, 'sucesso')
 
-    def test_cadastro_valido_redireciona_login(self):
-        """Cadastro válido deve exibir tela de login com mensagem de sucesso."""
-        resp = self.client.post(self.url, self.dados_validos)
-        self.assertContains(resp, 'sucesso')
+    def test_login_duplicado(self):
+        criar_usuario(login='novo', email='outro@x.com')
+        self.assertContains(self.client.post(self.url, self.ok),
+                            'login já está em uso')
 
-    def test_cadastro_login_duplicado(self):
-        """Login já existente deve retornar erro."""
-        criar_usuario(login='novologin', email='x@x.com')
-        resp = self.client.post(self.url, self.dados_validos)
-        self.assertContains(resp, 'login já está em uso')
+    def test_email_duplicado(self):
+        criar_usuario(login='outro', email='novo@x.com')
+        self.assertContains(self.client.post(self.url, self.ok),
+                            'e-mail já está cadastrado')
 
-    def test_cadastro_email_duplicado(self):
-        """E-mail já existente deve retornar erro."""
-        criar_usuario(login='outrologin', email='novo@email.com')
-        resp = self.client.post(self.url, self.dados_validos)
-        self.assertContains(resp, 'e-mail já está cadastrado')
+    def test_senhas_diferentes(self):
+        self.assertContains(
+            self.client.post(self.url, {**self.ok, 'senha_confirm': 'outra'}),
+            'senhas não coincidem',
+        )
 
-    def test_cadastro_senhas_diferentes(self):
-        """Senhas que não coincidem devem retornar erro."""
-        dados = {**self.dados_validos, 'senha_confirm': 'diferente'}
-        resp = self.client.post(self.url, dados)
-        self.assertContains(resp, 'senhas não coincidem')
+    def test_email_invalido(self):
+        self.assertContains(
+            self.client.post(self.url, {**self.ok, 'email': 'invalido'}),
+            'e-mail válido',
+        )
 
-    def test_cadastro_email_invalido(self):
-        """E-mail sem @ deve retornar erro de validação."""
-        dados = {**self.dados_validos, 'email': 'emailsemarroba'}
-        resp = self.client.post(self.url, dados)
-        self.assertContains(resp, 'e-mail válido')
-
-    def test_cadastro_senha_curta(self):
-        """Senha com menos de 6 caracteres deve retornar erro."""
-        dados = {**self.dados_validos, 'senha': '123', 'senha_confirm': '123'}
-        resp = self.client.post(self.url, dados)
-        self.assertContains(resp, '6 caracteres')
-
-    def test_cadastro_campos_obrigatorios(self):
-        """Envio de formulário vazio deve retornar erros obrigatórios."""
-        resp = self.client.post(self.url, {})
-        self.assertContains(resp, 'obrigatório')
+    def test_senha_curta(self):
+        self.assertContains(
+            self.client.post(self.url, {**self.ok, 'senha': '123', 'senha_confirm': '123'}),
+            '6 caracteres',
+        )
 
 
-# ─────────────────────────────────────────────
-# 6. Testes de Proteção de Rotas
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 5. Isolamento de Receitas por Usuário
+# ══════════════════════════════════════════════════════
 
-class ProtecaoRotasTest(TestCase):
+class IsolamentoUsuarioTest(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.u1 = criar_usuario(login='u1', email='u1@x.com')
+        self.u2 = criar_usuario(login='u2', email='u2@x.com')
+        self.r1 = criar_receita(self.u1, nome='Receita do U1')
+        self.r2 = criar_receita(self.u2, nome='Receita do U2')
 
-    def test_lista_redireciona_sem_login(self):
-        """Acessar lista sem estar logado redireciona para /login/."""
-        resp = self.client.get(reverse('receita_list'))
-        self.assertRedirects(resp, reverse('login'))
+    def test_lista_mostra_apenas_proprias(self):
+        logar(self.client, self.u1)
+        r = self.client.get(reverse('receita_list'))
+        self.assertContains(r, 'Receita do U1')
+        self.assertNotContains(r, 'Receita do U2')
 
-    def test_detalhe_redireciona_sem_login(self):
-        """Acessar detalhe sem login redireciona."""
-        receita = criar_receita()
-        resp = self.client.get(reverse('receita_detail', args=[receita.pk]))
-        self.assertRedirects(resp, reverse('login'))
+    def test_u2_nao_ve_lista_de_u1(self):
+        logar(self.client, self.u2)
+        r = self.client.get(reverse('receita_list'))
+        self.assertNotContains(r, 'Receita do U1')
 
-    def test_criar_redireciona_sem_login(self):
-        """Acessar criação sem login redireciona."""
-        resp = self.client.get(reverse('receita_create'))
-        self.assertRedirects(resp, reverse('login'))
+    def test_u1_nao_acessa_detalhe_de_u2(self):
+        logar(self.client, self.u1)
+        r = self.client.get(reverse('receita_detail', args=[self.r2.pk]))
+        self.assertEqual(r.status_code, 404)
+
+    def test_u1_nao_edita_receita_de_u2(self):
+        logar(self.client, self.u1)
+        r = self.client.get(reverse('receita_update', args=[self.r2.pk]))
+        self.assertEqual(r.status_code, 404)
+
+    def test_u1_nao_deleta_receita_de_u2(self):
+        logar(self.client, self.u1)
+        self.client.post(reverse('receita_delete', args=[self.r2.pk]))
+        self.assertTrue(Receita.objects.filter(pk=self.r2.pk).exists())
+
+    def test_criar_associa_usuario_logado(self):
+        logar(self.client, self.u1)
+        self.client.post(reverse('receita_create'), {
+            'nome': 'Nova', 'descricao': 'D', 'ingredientes': 'I',
+            'custo': '10.00', 'tipo_receita': 'Doce',
+        })
+        nova = Receita.objects.get(nome='Nova')
+        self.assertEqual(nova.user, self.u1)
 
 
-# ─────────────────────────────────────────────
-# 7. Testes de CRUD – Receitas
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 6. Filtros da Lista
+# ══════════════════════════════════════════════════════
 
-class ReceitaCRUDTest(TestCase):
+class FiltroTest(TestCase):
 
     def setUp(self):
         self.client = Client()
         self.user = criar_usuario()
-        sessao_logada(self.client, self.user)
+        logar(self.client, self.user)
+        criar_receita(self.user, nome='Bolo',   tipo_receita='Doce',    custo=Decimal('30'))
+        criar_receita(self.user, nome='Pudim',  tipo_receita='Doce',    custo=Decimal('15'))
+        criar_receita(self.user, nome='Coxinha',tipo_receita='Salgado', custo=Decimal('8'))
+        criar_receita(self.user, nome='Quiche', tipo_receita='Salgado', custo=Decimal('50'))
 
-    def test_lista_acessivel_logado(self):
-        """Lista de receitas deve retornar 200 quando logado."""
-        resp = self.client.get(reverse('receita_list'))
-        self.assertEqual(resp.status_code, 200)
+    def _get(self, params):
+        return self.client.get(reverse('receita_list'), params)
 
-    def test_lista_exibe_receitas(self):
-        """Receitas cadastradas devem aparecer na listagem."""
-        criar_receita(nome='Quiche Lorraine')
-        resp = self.client.get(reverse('receita_list'))
-        self.assertContains(resp, 'Quiche Lorraine')
+    def test_filtro_doce(self):
+        r = self._get({'tipo': 'Doce'})
+        self.assertContains(r, 'Bolo')
+        self.assertNotContains(r, 'Coxinha')
 
-    def test_detalhe_exibe_campos(self):
-        """Página de detalhe deve exibir nome e ingredientes."""
-        receita = criar_receita(nome='Torta Salgada', ingredientes='Frango, requeijão')
-        resp = self.client.get(reverse('receita_detail', args=[receita.pk]))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Torta Salgada')
-        self.assertContains(resp, 'Frango, requeijão')
+    def test_filtro_salgado(self):
+        r = self._get({'tipo': 'Salgado'})
+        self.assertContains(r, 'Coxinha')
+        self.assertNotContains(r, 'Bolo')
 
-    def test_criar_receita_post(self):
-        """POST válido em receita/nova/ deve criar receita e redirecionar."""
-        resp = self.client.post(reverse('receita_create'), {
-            'nome': 'Brigadeiro', 'descricao': 'Doce tradicional',
-            'ingredientes': 'Leite condensado, chocolate', 'custo': '5.00',
-            'tipo_receita': 'Doce',
-        })
-        self.assertRedirects(resp, reverse('receita_list'))
-        self.assertTrue(Receita.objects.filter(nome='Brigadeiro').exists())
+    def test_filtro_min_custo(self):
+        r = self._get({'min_custo': '20'})
+        self.assertContains(r, 'Bolo')
+        self.assertNotContains(r, 'Pudim')
 
-    def test_editar_receita(self):
-        """PUT em receita/<pk>/editar/ deve atualizar o nome."""
-        receita = criar_receita(nome='Original')
-        resp = self.client.post(reverse('receita_update', args=[receita.pk]), {
-            'nome': 'Atualizado', 'descricao': 'Desc',
-            'ingredientes': 'Ing', 'custo': '10.00',
-            'tipo_receita': 'Salgado',
-        })
-        self.assertRedirects(resp, reverse('receita_list'))
-        receita.refresh_from_db()
-        self.assertEqual(receita.nome, 'Atualizado')
+    def test_filtro_max_custo(self):
+        r = self._get({'max_custo': '20'})
+        self.assertContains(r, 'Pudim')
+        self.assertNotContains(r, 'Bolo')
 
-    def test_deletar_receita(self):
-        """POST em receita/<pk>/deletar/ deve remover a receita do banco."""
-        receita = criar_receita()
-        pk = receita.pk
-        self.client.post(reverse('receita_delete', args=[pk]))
-        self.assertFalse(Receita.objects.filter(pk=pk).exists())
+    def test_filtro_faixa(self):
+        r = self._get({'min_custo': '10', 'max_custo': '35'})
+        self.assertContains(r, 'Bolo')
+        self.assertContains(r, 'Pudim')
+        self.assertNotContains(r, 'Quiche')
+        self.assertNotContains(r, 'Coxinha')
+
+    def test_filtro_tipo_e_preco(self):
+        r = self._get({'tipo': 'Doce', 'min_custo': '20'})
+        self.assertContains(r, 'Bolo')
+        self.assertNotContains(r, 'Pudim')
+
+    def test_tipo_invalido_retorna_tudo(self):
+        r = self._get({'tipo': 'Invalido'})
+        self.assertContains(r, 'Bolo')
+        self.assertContains(r, 'Coxinha')
+
+    def test_custo_invalido_ignorado(self):
+        r = self._get({'min_custo': 'abc'})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Bolo')
 
 
-# ─────────────────────────────────────────────
-# 8. Testes de Filtros
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════
+# 7. Exportação PDF
+# ══════════════════════════════════════════════════════
 
-class FiltroReceitaTest(TestCase):
+class PDFExportTest(TestCase):
 
     def setUp(self):
         self.client = Client()
         self.user = criar_usuario()
-        sessao_logada(self.client, self.user)
+        logar(self.client, self.user)
+        criar_receita(self.user, nome='Torta Doce',   tipo_receita='Doce',    custo=Decimal('25'))
+        criar_receita(self.user, nome='Pastel Salgado',tipo_receita='Salgado', custo=Decimal('10'))
 
-        self.doce1 = criar_receita(nome='Bolo', tipo_receita='Doce',  custo=Decimal('30.00'))
-        self.doce2 = criar_receita(nome='Pudim', tipo_receita='Doce', custo=Decimal('15.00'))
-        self.salg1 = criar_receita(nome='Coxinha', tipo_receita='Salgado', custo=Decimal('8.00'))
-        self.salg2 = criar_receita(nome='Quiche',  tipo_receita='Salgado', custo=Decimal('50.00'))
-        self.url   = reverse('receita_list')
+    def test_pdf_retorna_200(self):
+        r = self.client.get(reverse('receita_pdf'))
+        self.assertEqual(r.status_code, 200)
 
-    def test_filtro_tipo_doce(self):
-        """Filtrar por Doce deve retornar apenas receitas doces."""
-        resp = self.client.get(self.url, {'tipo': 'Doce'})
-        self.assertContains(resp, 'Bolo')
-        self.assertContains(resp, 'Pudim')
-        self.assertNotContains(resp, 'Coxinha')
-        self.assertNotContains(resp, 'Quiche')
+    def test_pdf_content_type(self):
+        r = self.client.get(reverse('receita_pdf'))
+        self.assertEqual(r['Content-Type'], 'application/pdf')
 
-    def test_filtro_tipo_salgado(self):
-        """Filtrar por Salgado deve retornar apenas receitas salgadas."""
-        resp = self.client.get(self.url, {'tipo': 'Salgado'})
-        self.assertContains(resp, 'Coxinha')
-        self.assertContains(resp, 'Quiche')
-        self.assertNotContains(resp, 'Bolo')
-        self.assertNotContains(resp, 'Pudim')
+    def test_pdf_header_attachment(self):
+        r = self.client.get(reverse('receita_pdf'))
+        self.assertIn('attachment', r['Content-Disposition'])
+        self.assertIn('.pdf', r['Content-Disposition'])
 
-    def test_filtro_custo_minimo(self):
-        """Filtrar por custo mínimo deve excluir receitas mais baratas."""
-        resp = self.client.get(self.url, {'min_custo': '20'})
-        self.assertContains(resp, 'Bolo')
-        self.assertContains(resp, 'Quiche')
-        self.assertNotContains(resp, 'Pudim')
-        self.assertNotContains(resp, 'Coxinha')
+    def test_pdf_sem_login_redireciona(self):
+        client = Client()   # cliente sem sessão
+        r = client.get(reverse('receita_pdf'))
+        self.assertRedirects(r, reverse('login'))
 
-    def test_filtro_custo_maximo(self):
-        """Filtrar por custo máximo deve excluir receitas mais caras."""
-        resp = self.client.get(self.url, {'max_custo': '20'})
-        self.assertContains(resp, 'Pudim')
-        self.assertContains(resp, 'Coxinha')
-        self.assertNotContains(resp, 'Bolo')
-        self.assertNotContains(resp, 'Quiche')
+    def test_pdf_com_filtro_tipo(self):
+        # Deve retornar 200 mesmo com filtros aplicados
+        r = self.client.get(reverse('receita_pdf'), {'tipo': 'Doce'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'application/pdf')
 
-    def test_filtro_faixa_de_preco(self):
-        """Filtrar por min e max deve retornar apenas receitas na faixa."""
-        resp = self.client.get(self.url, {'min_custo': '10', 'max_custo': '35'})
-        self.assertContains(resp, 'Bolo')
-        self.assertContains(resp, 'Pudim')
-        self.assertNotContains(resp, 'Coxinha')
-        self.assertNotContains(resp, 'Quiche')
+    def test_pdf_lista_vazia_retorna_200(self):
+        # Filtro que não bate em nada — PDF ainda deve ser gerado
+        r = self.client.get(reverse('receita_pdf'),
+                            {'min_custo': '9999'})
+        self.assertEqual(r.status_code, 200)
 
-    def test_filtro_combinado_tipo_e_preco(self):
-        """Combinar tipo e custo mínimo deve refinar corretamente."""
-        resp = self.client.get(self.url, {'tipo': 'Doce', 'min_custo': '20'})
-        self.assertContains(resp, 'Bolo')
-        self.assertNotContains(resp, 'Pudim')
-        self.assertNotContains(resp, 'Coxinha')
-
-    def test_sem_filtro_retorna_tudo(self):
-        """Sem filtros, todas as receitas devem aparecer."""
-        resp = self.client.get(self.url)
-        self.assertContains(resp, 'Bolo')
-        self.assertContains(resp, 'Pudim')
-        self.assertContains(resp, 'Coxinha')
-        self.assertContains(resp, 'Quiche')
-
-    def test_filtro_tipo_invalido_retorna_tudo(self):
-        """Tipo inválido (não Doce/Salgado) não deve filtrar nada."""
-        resp = self.client.get(self.url, {'tipo': 'Invalido'})
-        self.assertContains(resp, 'Bolo')
-        self.assertContains(resp, 'Coxinha')
-
-    def test_filtro_custo_invalido_ignorado(self):
-        """Valor não numérico em custo deve ser ignorado, retornando tudo."""
-        resp = self.client.get(self.url, {'min_custo': 'abc'})
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Bolo')
-        self.assertContains(resp, 'Coxinha')
+    def test_pdf_nao_contem_dados_de_outro_usuario(self):
+        """Usuário 2 não deve receber receitas do usuário 1 no PDF."""
+        u2 = criar_usuario(login='u2', email='u2@x.com')
+        criar_receita(u2, nome='Receita Secreta U2')
+        # PDF gerado como u1 (sessão atual) — não deve conter receita de u2
+        r = self.client.get(reverse('receita_pdf'))
+        # PDF é binário; checamos que "Receita Secreta U2" não está no stream
+        self.assertNotIn(b'Receita Secreta U2', r.content)

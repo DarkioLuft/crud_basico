@@ -9,9 +9,7 @@
     {% if erros %}
       <div class="error-msg">
         <ul style="margin: 0; padding-left: 1.2rem;">
-          {% for erro in erros %}
-            <li>{{ erro }}</li>
-          {% endfor %}
+          {% for erro in erros %}<li>{{ erro }}</li>{% endfor %}
         </ul>
       </div>
     {% endif %}
@@ -38,10 +36,12 @@
           <label>Confirmar senha:</label>
           <input type="password" name="senha_confirm" required placeholder="Repita a senha">
       </p>
-      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Cadastrar</button>
+      <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1rem;">
+          Cadastrar
+      </button>
     </form>
 
-    <p style="text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
+    <p style="text-align:center; margin-top:1.5rem; color:var(--text-muted); font-size:0.9rem;">
         Já tem conta? <a href="{% url 'login' %}">Faça login</a>
     </p>
 </div>

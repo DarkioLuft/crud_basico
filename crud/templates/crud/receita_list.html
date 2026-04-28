@@ -9,16 +9,18 @@
     </div>
     <form method="post" action="{% url 'logout' %}" style="margin: 0;">
         {% csrf_token %}
-        <button type="submit" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.9rem;">Sair</button>
+        <button type="submit" class="btn btn-outline"
+                style="padding: 0.3rem 0.8rem; font-size: 0.9rem;">Sair</button>
     </form>
 </div>
 
-<div class="header-bar" style="background: transparent; box-shadow: none; padding: 0; margin-bottom: 1rem;">
+<div class="header-bar"
+     style="background: transparent; box-shadow: none; padding: 0; margin-bottom: 1rem;">
     <h1 style="margin: 0;">Minhas Receitas</h1>
     <a href="{% url 'receita_create' %}" class="btn btn-primary">+ Nova Receita</a>
 </div>
 
-<!-- Filtros -->
+<!-- ── Filtros ──────────────────────────────────────────────────────── -->
 <div class="card" style="padding: 1.2rem 2rem;">
     <form method="get" action="{% url 'receita_list' %}">
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
@@ -27,8 +29,8 @@
                 <label style="font-size: 0.85rem; margin-bottom: 0.3rem;">Tipo</label>
                 <select name="tipo">
                     <option value="">Todos</option>
-                    <option value="Doce"   {% if tipo_filtro == 'Doce'    %}selected{% endif %}>🍰 Doce</option>
-                    <option value="Salgado"{% if tipo_filtro == 'Salgado' %}selected{% endif %}>🧂 Salgado</option>
+                    <option value="Doce"    {% if tipo_filtro == 'Doce'    %}selected{% endif %}>🍰 Doce</option>
+                    <option value="Salgado" {% if tipo_filtro == 'Salgado' %}selected{% endif %}>🧂 Salgado</option>
                 </select>
             </div>
 
@@ -45,36 +47,55 @@
             </div>
 
             <div style="display: flex; gap: 0.5rem;">
-                <button type="submit" class="btn btn-primary" style="height: fit-content;">Filtrar</button>
-                <a href="{% url 'receita_list' %}" class="btn btn-outline" style="height: fit-content;">Limpar</a>
+                <button type="submit" class="btn btn-primary"
+                        style="height: fit-content;">Filtrar</button>
+                <a href="{% url 'receita_list' %}" class="btn btn-outline"
+                   style="height: fit-content;">Limpar</a>
             </div>
         </div>
     </form>
 </div>
 
+<!-- ── Lista ────────────────────────────────────────────────────────── -->
 <div class="card">
-    {% if tipo_filtro or min_custo or max_custo %}
-    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
-        {{ receitas|length }} receita{{ receitas|length|pluralize }} encontrada{{ receitas|length|pluralize }}
-        {% if tipo_filtro %} · Tipo: <strong>{{ tipo_filtro }}</strong>{% endif %}
-        {% if min_custo %} · A partir de <strong>R$ {{ min_custo }}</strong>{% endif %}
-        {% if max_custo %} · Até <strong>R$ {{ max_custo }}</strong>{% endif %}
-    </p>
-    {% endif %}
+
+    {# Barra de info + botão exportar #}
+    <div style="display: flex; justify-content: space-between; align-items: center;
+                margin-bottom: 0.8rem;">
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+            {% if tipo_filtro or min_custo or max_custo %}
+                {{ receitas|length }} receita{{ receitas|length|pluralize }} encontrada{{ receitas|length|pluralize }}
+                {% if tipo_filtro %} · Tipo: <strong>{{ tipo_filtro }}</strong>{% endif %}
+                {% if min_custo %} · A partir de <strong>R$ {{ min_custo }}</strong>{% endif %}
+                {% if max_custo %} · Até <strong>R$ {{ max_custo }}</strong>{% endif %}
+            {% else %}
+                {{ receitas|length }} receita{{ receitas|length|pluralize }} cadastrada{{ receitas|length|pluralize }}
+            {% endif %}
+        </p>
+
+        {# Link para PDF preserva os filtros ativos #}
+        <a href="{% url 'receita_pdf' %}{% if tipo_filtro or min_custo or max_custo %}?tipo={{ tipo_filtro }}&min_custo={{ min_custo }}&max_custo={{ max_custo }}{% endif %}"
+           class="btn btn-outline"
+           style="font-size: 0.85rem; padding: 0.3rem 0.9rem; display: flex; align-items: center; gap: 0.4rem;"
+           title="Exportar lista atual para PDF">
+            📄 Exportar PDF
+        </a>
+    </div>
 
     <ul class="recipe-list">
         {% for receita in receitas %}
             <li>
                 <div>
-                    <a href="{% url 'receita_detail' receita.pk %}" class="recipe-title">{{ receita.nome }}</a>
-                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">
+                    <a href="{% url 'receita_detail' receita.pk %}"
+                       class="recipe-title">{{ receita.nome }}</a>
+                    <span style="font-size: 0.78rem; color: var(--text-muted); margin-left: 0.5rem;">
                         {{ receita.tipo_receita }}
                     </span>
                 </div>
                 <span class="recipe-price">R$ {{ receita.custo }}</span>
             </li>
         {% empty %}
-            <li style="color: var(--text-muted); justify-content: center;">
+            <li style="color: var(--text-muted); justify-content: center; padding: 2rem 0;">
                 Nenhuma receita encontrada com os filtros aplicados.
             </li>
         {% endfor %}

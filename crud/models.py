@@ -21,6 +21,12 @@ class Receita(models.Model):
     ]
 
     id_receita = models.AutoField(primary_key=True)
+    # Vínculo ao dono da receita. Receitas pré-existentes migram para user_id=1.
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='receitas',
+    )
     nome = models.CharField(max_length=100)
     descricao = models.TextField()
     ingredientes = models.TextField()
