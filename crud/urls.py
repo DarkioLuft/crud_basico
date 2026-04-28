@@ -6,7 +6,8 @@ urlpatterns = [
     # Rotas de Autenticação
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.logout_view, name='logout'),
-    
+    path('register/', views.RegisterView.as_view(), name='register'),
+
     # Rotas de Receitas
     path('', views.ReceitaListView.as_view(), name='receita_list'),
     path('receita/<int:pk>/', views.ReceitaDetailView.as_view(), name='receita_detail'),

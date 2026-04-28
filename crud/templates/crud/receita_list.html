@@ -5,7 +5,7 @@
 {% block content %}
 <div class="header-bar">
     <div>
-        <strong>Olá, {{ user.username }}!</strong>
+        <strong>Olá, {{ request.session.user_name }}!</strong>
     </div>
     <form method="post" action="{% url 'logout' %}" style="margin: 0;">
         {% csrf_token %}
@@ -18,15 +18,65 @@
     <a href="{% url 'receita_create' %}" class="btn btn-primary">+ Nova Receita</a>
 </div>
 
+<!-- Filtros -->
+<div class="card" style="padding: 1.2rem 2rem;">
+    <form method="get" action="{% url 'receita_list' %}">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+
+            <div style="flex: 1; min-width: 140px;">
+                <label style="font-size: 0.85rem; margin-bottom: 0.3rem;">Tipo</label>
+                <select name="tipo">
+                    <option value="">Todos</option>
+                    <option value="Doce"   {% if tipo_filtro == 'Doce'    %}selected{% endif %}>🍰 Doce</option>
+                    <option value="Salgado"{% if tipo_filtro == 'Salgado' %}selected{% endif %}>🧂 Salgado</option>
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.85rem; margin-bottom: 0.3rem;">Custo mín. (R$)</label>
+                <input type="number" name="min_custo" min="0" step="0.01"
+                       placeholder="0,00" value="{{ min_custo }}">
+            </div>
+
+            <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.85rem; margin-bottom: 0.3rem;">Custo máx. (R$)</label>
+                <input type="number" name="max_custo" min="0" step="0.01"
+                       placeholder="9999,99" value="{{ max_custo }}">
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary" style="height: fit-content;">Filtrar</button>
+                <a href="{% url 'receita_list' %}" class="btn btn-outline" style="height: fit-content;">Limpar</a>
+            </div>
+        </div>
+    </form>
+</div>
+
 <div class="card">
+    {% if tipo_filtro or min_custo or max_custo %}
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
+        {{ receitas|length }} receita{{ receitas|length|pluralize }} encontrada{{ receitas|length|pluralize }}
+        {% if tipo_filtro %} · Tipo: <strong>{{ tipo_filtro }}</strong>{% endif %}
+        {% if min_custo %} · A partir de <strong>R$ {{ min_custo }}</strong>{% endif %}
+        {% if max_custo %} · Até <strong>R$ {{ max_custo }}</strong>{% endif %}
+    </p>
+    {% endif %}
+
     <ul class="recipe-list">
         {% for receita in receitas %}
             <li>
-                <a href="{% url 'receita_detail' receita.pk %}" class="recipe-title">{{ receita.nome }}</a> 
+                <div>
+                    <a href="{% url 'receita_detail' receita.pk %}" class="recipe-title">{{ receita.nome }}</a>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">
+                        {{ receita.tipo_receita }}
+                    </span>
+                </div>
                 <span class="recipe-price">R$ {{ receita.custo }}</span>
             </li>
         {% empty %}
-            <li style="color: var(--text-muted); justify-content: center;">Nenhuma receita cadastrada ainda.</li>
+            <li style="color: var(--text-muted); justify-content: center;">
+                Nenhuma receita encontrada com os filtros aplicados.
+            </li>
         {% endfor %}
     </ul>
 </div>

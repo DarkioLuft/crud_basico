@@ -6,6 +6,13 @@
 <div class="card" style="max-width: 400px; margin: 4rem auto;">
     <h1 style="text-align: center; margin-bottom: 1.5rem;">Acesso ao Sistema</h1>
 
+    {% if sucesso %}
+      <div style="background-color:#d1fae5; color:#065f46; padding:0.75rem; border-radius:6px;
+                  border-left:4px solid var(--primary-color); margin-bottom:1rem;">
+        {{ sucesso }}
+      </div>
+    {% endif %}
+
     {% if erro %}
       <div class="error-msg">{{ erro }}</div>
     {% endif %}
@@ -22,5 +29,9 @@
       </p>
       <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Entrar</button>
     </form>
+
+    <p style="text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
+        Não tem conta? <a href="{% url 'register' %}">Cadastre-se</a>
+    </p>
 </div>
 {% endblock %}
