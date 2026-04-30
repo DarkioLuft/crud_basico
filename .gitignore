@@ -5,6 +5,8 @@ __pycache__/
 
 # Environments
 .env
+.env.homolog
+.env.prod
 .venv
 env/
 venv/
@@ -20,3 +22,9 @@ static/
 # Django specific
 local_settings.py
 *.log
+
+# Relatórios de Testes e SonarQube
+coverage.xml
+.coverage
+.pytest_cache/
+.scannerwork/
