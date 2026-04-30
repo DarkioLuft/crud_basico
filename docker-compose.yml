@@ -1,0 +1,45 @@
+# Este arquivo servirá de base estrutural. 
+# Mais tarde o estenderemos para Homolog e Prod.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: crud_db_base
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: crud_web_base
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=5432
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - static_volume:/app/staticfiles
+
+volumes:
+  postgres_data:
+  static_volume:
