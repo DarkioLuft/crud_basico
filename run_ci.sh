@@ -16,22 +16,25 @@ docker compose up -d db
 echo "⏳ A aguardar a inicialização da base de dados..."
 sleep 5
 
-# 3. Executa os testes isolados num contentor efémero
-# Instalamos o pytest e pytest-cov on-the-fly para não "sujar" a imagem de produção
+# 3. Executa os testes isolados num contentor efémero com o entrypoint bash
 echo "🧪 A executar os 20 testes com pytest e a gerar estatísticas (coverage)..."
-docker compose run --rm web bash -c "pip install pytest pytest-django pytest-cov && pytest crud/tests.py --ds=core.settings --cov=. --cov-report=xml"
+docker compose run --rm --entrypoint bash web -c "pip install pytest pytest-django pytest-cov && pytest crud/tests.py --ds=core.settings --cov=. --cov-report=xml"
 
 echo "✅ Testes concluídos com sucesso! Relatório 'coverage.xml' gerado."
 
-# 4. Instruções para o Sonar Scanner
+# 4. Envia a análise para o SonarQube automaticamente
 echo "=========================================================="
 echo "📊 FASE DE ANÁLISE DE QUALIDADE DE CÓDIGO (SONARQUBE)    "
 echo "=========================================================="
-echo "O servidor do SonarQube está a iniciar. Pode demorar 1-2 minutos."
-echo "1. Aceda a http://SEU_IP:9000 no navegador."
-echo "2. Inicie sessão com admin / admin (e altere a palavra-passe)."
-echo "3. Crie um projeto manual e gere um Token de acesso."
-echo "4. Para enviar a análise, execute o seguinte comando no terminal:"
-echo ""
-echo "docker run --rm --network host -e SONAR_HOST_URL='http://localhost:9000' -e SONAR_TOKEN='COLOQUE_O_SEU_TOKEN_AQUI' -v \"\$(pwd):/usr/src\" sonarsource/sonar-scanner-cli"
-echo "=========================================================="
+echo "A enviar o código e as estatísticas de teste para o SonarQube..."
+
+docker run --rm --network host \
+  -e SONAR_HOST_URL='http://177.44.248.75:9000' \
+  -e SONAR_TOKEN='sqp_6034f27c012bbc9620ed5e1d6eacfb11b8bb3905' \
+  -v "$(pwd):/usr/src" \
+  sonarsource/sonar-scanner-cli
+
+echo "🧹 Limpando o banco de testes..."
+docker compose stop db
+
+echo "🎉 Pipeline CI finalizado! O relatório de qualidade já está disponível no SonarQube."

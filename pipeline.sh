@@ -1,6 +1,7 @@
 #!/bin/bash
 # Pipeline Semi-Automatizado de Deploy (CI/CD)
 
+# set -e garante que o script pare imediatamente se qualquer comando falhar (como o run_ci.sh)
 set -e
 
 COMMAND=$1
@@ -15,9 +16,11 @@ case "$COMMAND" in
         git pull origin main || echo "Git pull ignorado."
 
         echo "2️⃣  Executando testes automatizados e SonarQube (CI)..."
-        ./run_ci.sh
+        # Se o run_ci.sh falhar, o set -e fará com que o pipeline.sh aborte aqui mesmo
+        bash ./run_ci.sh
 
         echo "3️⃣  Construindo e subindo o ambiente de Homologação..."
+        # O build cria a imagem crud_basico:homolog que será usada depois na produção
         docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
         
         echo "✅ HOMOLOGAÇÃO ONLINE! Acesse: http://SEU_IP:8001"
