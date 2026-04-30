@@ -1,0 +1,40 @@
+services:
+  db_homolog:
+    image: postgres:16-alpine
+    container_name: crud_db_homolog
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - homolog_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web_homolog:
+    build: .
+    image: crud_basico:homolog
+    container_name: crud_web_homolog
+    restart: always
+    depends_on:
+      db_homolog:
+        condition: service_healthy
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db_homolog
+      - DB_PORT=5432
+    ports:
+      - "${WEB_PORT}:8000"
+
+volumes:
+  homolog_data:
