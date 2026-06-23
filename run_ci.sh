@@ -9,6 +9,10 @@ echo "🚀 A iniciar o Pipeline de Integração Contínua (CI)..."
 echo "🐳 A levantar o SonarQube (porta 9000)..."
 docker compose -f docker-compose.ci.yml up -d
 
+echo "Preset do SonarQube"
+chmod +x setup_sonar.sh
+./setup_sonar.sh
+
 # 2. Levanta a base de dados do docker-compose base para os testes
 echo "🗄️ A levantar a Base de Dados de Teste..."
 docker compose up -d db
@@ -40,9 +44,10 @@ echo "📊 FASE DE ANÁLISE DE QUALIDADE DE CÓDIGO (SONARQUBE)    "
 echo "=========================================================="
 echo "A enviar o código, os testes e o relatório do Mess Detector para o SonarQube..."
 
+source .env.sonar
 docker run --rm --network host \
   -e SONAR_HOST_URL='http://177.44.248.75:9000' \
-  -e SONAR_TOKEN='sqp_6034f27c012bbc9620ed5e1d6eacfb11b8bb3905' \
+  -e SONAR_TOKEN="$SONAR_TOKEN" \
   -v "$(pwd):/usr/src" \
   sonarsource/sonar-scanner-cli
 

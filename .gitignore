@@ -18,12 +18,14 @@ db.sqlite3
 # Media and Static folders
 media/
 static/
+staticfiles/
 
 # Django specific
 local_settings.py
 *.log
 
 # Relatórios de Testes, Mess Detector e SonarQube
+.env.sonar
 coverage.xml
 test-report.xml
 pylint-report.txt
