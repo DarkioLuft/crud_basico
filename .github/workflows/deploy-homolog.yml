@@ -1,0 +1,25 @@
+name: 2 - Deploy Homologação
+
+# Disparo 100% manual: vá em Actions -> "2 - Deploy Homologação" -> Run workflow
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-homolog:
+    runs-on: ubuntu-latest
+    environment: homologacao   # opcional: pode adicionar "required reviewers" aqui também
+    steps:
+      - name: Deploy via SSH na VM (Homologação)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/crud_basico
+            git pull origin main
+            docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
+
+      - name: Resumo
+        run: echo "✅ Ambiente de Homologação atualizado em http://${{ secrets.VM_HOST }}:8001"
