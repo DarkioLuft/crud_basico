@@ -1,0 +1,140 @@
+name: CI/CD Pipeline - CRUD Receitas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:   # permite disparar manualmente pelo botão "Run workflow"
+
+jobs:
+  # ============================================================
+  # ETAPA D + E: Testes automatizados + Mess Detector + SonarQube
+  # (substitui o run_ci.sh local)
+  # ============================================================
+  test-and-quality:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: crud_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: core.settings
+      SECRET_KEY: ci-secret-key-github-actions
+      DEBUG: "True"
+      ALLOWED_HOSTS: "*"
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: crud_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: 5432
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # histórico completo, recomendado p/ análise do SonarQube
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov pylint pylint-django
+
+      - name: Rodar os 20 testes automatizados + cobertura
+        run: |
+          pytest crud/tests.py --ds=core.settings --cov=. --cov-report=xml --junitxml=test-report.xml -v
+
+      - name: Publicar estatísticas de execução dos testes
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Resultados dos Testes (JUnit)
+          path: test-report.xml
+          reporter: java-junit
+
+      - name: Rodar Mess Detector (Pylint)
+        run: |
+          pylint --rcfile=.pylintrc --output-format=parseable crud core | tee pylint-report.txt || true
+
+      - name: Análise de Qualidade de Código (SonarQube)
+        uses: sonarsource/sonarqube-scan-action@v3
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Guardar relatórios gerados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-ci
+          path: |
+            coverage.xml
+            test-report.xml
+            pylint-report.txt
+
+  # ============================================================
+  # ETAPA F: Atualização do ambiente de Homologação
+  # Só roda se os testes/qualidade passarem, e só na branch main
+  # ============================================================
+  deploy-homolog:
+    needs: test-and-quality
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: homologacao
+    steps:
+      - name: Deploy via SSH na VM (Homologação)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/crud_basico
+            git pull origin main
+            docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
+
+  # ============================================================
+  # ETAPA G: Atualização do ambiente de Produção
+  # "environment: producao" com Required Reviewers configurado
+  # nas configurações do repositório = a etapa de aprovação manual
+  # (clique de aprovação), cumprindo o requisito de processo
+  # "semi-automatizado".
+  # ============================================================
+  deploy-prod:
+    needs: deploy-homolog
+    runs-on: ubuntu-latest
+    environment: producao
+    steps:
+      - name: Deploy via SSH na VM (Produção)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/crud_basico
+            docker tag crud_basico:homolog crud_basico:prod
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d

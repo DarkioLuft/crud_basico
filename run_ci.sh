@@ -10,8 +10,8 @@ echo "🐳 A levantar o SonarQube (porta 9000)..."
 docker compose -f docker-compose.ci.yml up -d
 
 echo "Preset do SonarQube"
-chmod +x setup_sonar.sh
-./setup_sonar.sh
+# chmod +x setup_sonar.sh
+# ./setup_sonar.sh
 
 # 2. Levanta a base de dados do docker-compose base para os testes
 echo "🗄️ A levantar a Base de Dados de Teste..."
