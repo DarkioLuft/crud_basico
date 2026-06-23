@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script para rodar a Integração Contínua (Testes + SonarQube)
+# Script para rodar a Integração Contínua (Testes + Mess Detector + SonarQube)
 
 set -e
 
@@ -16,17 +16,29 @@ docker compose up -d db
 echo "⏳ A aguardar a inicialização da base de dados..."
 sleep 5
 
-# 3. Executa os testes isolados num contentor efémero com o entrypoint bash
+# 3. Executa os testes + o Mess Detector (Pylint) num contentor efémero
+#
+#    IMPORTANTE: usamos "-v $(pwd):/app" para montar o código-fonte do host
+#    dentro do contentor. Sem isso, os relatórios (coverage.xml,
+#    pylint-report.txt, test-report.xml) são gerados na camada interna do
+#    contentor e são perdidos quando ele é removido (--rm), nunca chegando
+#    ao host para o sonar-scanner ler na fase seguinte.
 echo "🧪 A executar os 20 testes com pytest e a gerar estatísticas (coverage)..."
-docker compose run --rm --entrypoint bash web -c "pip install pytest pytest-django pytest-cov && pytest crud/tests.py --ds=core.settings --cov=. --cov-report=xml"
+docker compose run --rm -v "$(pwd):/app" --entrypoint bash web -c "
+    pip install --quiet pytest pytest-django pytest-cov pylint pylint-django &&
+    pytest crud/tests.py --ds=core.settings --cov=. --cov-report=xml --junitxml=test-report.xml -v &&
+    echo '🧹 A executar o Mess Detector (Pylint) sobre crud/ e core/...' &&
+    (pylint --rcfile=.pylintrc --output-format=parseable crud core | tee pylint-report.txt) || true
+"
 
-echo "✅ Testes concluídos com sucesso! Relatório 'coverage.xml' gerado."
+echo "✅ Testes concluídos! Relatórios gerados: coverage.xml, test-report.xml, pylint-report.txt"
 
 # 4. Envia a análise para o SonarQube automaticamente
+#    (cobertura de testes + estatísticas de execução + achados do Mess Detector)
 echo "=========================================================="
 echo "📊 FASE DE ANÁLISE DE QUALIDADE DE CÓDIGO (SONARQUBE)    "
 echo "=========================================================="
-echo "A enviar o código e as estatísticas de teste para o SonarQube..."
+echo "A enviar o código, os testes e o relatório do Mess Detector para o SonarQube..."
 
 docker run --rm --network host \
   -e SONAR_HOST_URL='http://177.44.248.75:9000' \
@@ -37,4 +49,4 @@ docker run --rm --network host \
 echo "🧹 Limpando o banco de testes..."
 docker compose stop db
 
-echo "🎉 Pipeline CI finalizado! O relatório de qualidade já está disponível no SonarQube."
+echo "🎉 Pipeline CI finalizado! O relatório de qualidade (incluindo o Mess Detector) já está disponível no SonarQube."

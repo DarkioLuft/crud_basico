@@ -23,8 +23,10 @@ static/
 local_settings.py
 *.log
 
-# Relatórios de Testes e SonarQube
+# Relatórios de Testes, Mess Detector e SonarQube
 coverage.xml
+test-report.xml
+pylint-report.txt
 .coverage
 .pytest_cache/
 .scannerwork/

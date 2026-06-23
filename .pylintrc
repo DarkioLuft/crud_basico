@@ -1,0 +1,41 @@
+[MAIN]
+# Plugin que entende padrões do Django (managers dinâmicos, Meta, etc.)
+load-plugins=pylint_django
+django-settings-module=core.settings
+
+# Não analisa migrations (código gerado automaticamente pelo Django)
+ignore-patterns=^0[0-9]{3}_.*\.py$
+ignore=migrations,venv,staticfiles,.venv
+
+jobs=0
+
+[MESSAGES CONTROL]
+# Focado em "mess detection" (design/complexidade/código morto), não em
+# estilo de documentação - equivalente ao espírito do PHPMD.
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    too-few-public-methods,
+    duplicate-code,
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+# Limites de complexidade/tamanho - o coração do "mess detector".
+# CBVs do Django herdam naturalmente de várias classes; o limite padrão (7)
+# gera ruído. Sobe para 10 para só pegar hierarquias realmente excessivas.
+max-parents=10
+max-locals=15
+max-branches=12
+max-statements=50
+max-args=6
+max-attributes=10
+
+[BASIC]
+good-names=i,j,k,qs,pk,_
+
+[REPORTS]
+output-format=text
+score=yes
