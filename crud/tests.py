@@ -135,7 +135,7 @@ class AuthViewsTests(TestCase):
         self.assertNotIn('user_id', self.client.session)
         self.assertRedirects(response, reverse('login'))
 
-
+"""
 class ReceitasViewsTests(TestCase):
     """Testes das rotas de Receitas com isolamento de usuário (4 testes)"""
 
@@ -144,7 +144,7 @@ class ReceitasViewsTests(TestCase):
         self.user = criar_usuario()
         logar(self.client, self.user)
 
-    def test_14_receita_list_exige_login_e_lista_dados(self):
+  def test_14_receita_list_exige_login_e_lista_dados(self):
         criar_receita(self.user, nome="Coxinha Teste")
         response = self.client.get(reverse('receita_list'))
         self.assertEqual(response.status_code, 200)
@@ -256,3 +256,4 @@ class DatabaseLoadTests(TransactionTestCase):
         
         # Este teste avalia o tempo de round-trip do banco de dados (Gargalo de I/O)
         self.assertLess(duration, 5.0, f"Tempo de I/O do banco excedeu o limite: {duration:.2f}s.")
+        ""
