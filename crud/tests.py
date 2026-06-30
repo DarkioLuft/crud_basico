@@ -164,7 +164,8 @@ class ReceitasViewsTests(TestCase):
 
     def test_17_receita_update_altera_dados(self):
         receita = criar_receita(self.user, nome="Antigo")
-        dados = {'nome': 'Atualizado', 'descricao': 'D', 'ingredientes': 'I', 'custo': '15.00', 'tipo_receita': 'Doce'}#, 'porcoes': '1'
+        dados = {'nome': 'Atualizado', 'descricao': 'D', 'ingredientes': 'I', 'custo': '15.00', 'tipo_receita': 'Doce'}
+        #dados = {'nome': 'Atualizado', 'descricao': 'D', 'ingredientes': 'I', 'custo': '15.00', 'tipo_receita': 'Doce', 'porcoes': '1'}
         response = self.client.post(reverse('receita_update', args=[receita.pk]), dados)
         self.assertRedirects(response, reverse('receita_list'))
         receita.refresh_from_db()
@@ -255,4 +256,3 @@ class DatabaseLoadTests(TransactionTestCase):
         
         # Este teste avalia o tempo de round-trip do banco de dados (Gargalo de I/O)
         self.assertLess(duration, 5.0, f"Tempo de I/O do banco excedeu o limite: {duration:.2f}s.")
-        
