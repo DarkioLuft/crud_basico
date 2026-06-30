@@ -33,7 +33,9 @@ class Receita(models.Model):
     data_criacao = models.DateTimeField(auto_now_add=True)
     custo = models.DecimalField(max_digits=10, decimal_places=2)
     tipo_receita = models.CharField(max_length=50, choices=TIPO_CHOICES)
-    porcoes = models.PositiveIntegerField(default=1, verbose_name='Porções')
+    #porcoes = models.PositiveIntegerField(default=1, verbose_name='Porções')
+
+    
 
     def __str__(self):
         return self.nome

@@ -178,8 +178,8 @@ class ReceitaDetailView(RequerLoginMixin, DetailView):
 class ReceitaCreateView(RequerLoginMixin, CreateView):
     model = Receita
     template_name = 'crud/receita_form.html'
-    #fields = ['nome', 'descricao', 'ingredientes', 'custo', 'tipo_receita']
-    fields = ['nome', 'descricao', 'ingredientes', 'custo', 'tipo_receita', 'porcoes']
+    fields = ['nome', 'descricao', 'ingredientes', 'custo', 'tipo_receita']
+    #fields = ['nome', 'descricao', 'ingredientes', 'custo', 'tipo_receita', 'porcoes']
     success_url = reverse_lazy('receita_list')
 
     def form_valid(self, form):
