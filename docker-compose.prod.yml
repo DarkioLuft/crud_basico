@@ -16,6 +16,7 @@ services:
       retries: 5
 
   web_prod:
+    build: .
     image: crud_basico:prod
     container_name: crud_web_prod
     restart: always
