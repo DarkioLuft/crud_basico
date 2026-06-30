@@ -44,7 +44,6 @@ echo "📊 FASE DE ANÁLISE DE QUALIDADE DE CÓDIGO (SONARQUBE)    "
 echo "=========================================================="
 echo "A enviar o código, os testes e o relatório do Mess Detector para o SonarQube..."
 
-source .env.sonar
 docker run --rm --network host \
   -e SONAR_HOST_URL='http://177.44.248.75:9000' \
   -e SONAR_TOKEN="$SONAR_TOKEN" \
