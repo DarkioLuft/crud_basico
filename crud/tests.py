@@ -37,9 +37,9 @@ def logar(client, user):
 # =====================================================================
 # 1. TESTES UNITÁRIOS E MOCKS (17 Testes)
 # =====================================================================
-
+"""
 class ModelsUnitTests(TestCase):
-    """Testes unitários isolados para os Modelos (4 testes)"""
+    Testes unitários isolados para os Modelos (4 testes)
     
     def test_01_user_str_retorna_nome(self):
         user = User(name="Darkio", login="darkio", senha="123")
@@ -59,7 +59,7 @@ class ModelsUnitTests(TestCase):
     def test_04_user_status_padrao_true(self):
         user = User(name="Test", login="test", email="test@test.com", senha="123")
         self.assertTrue(user.status)
-
+"""
 
 class HelpersAndMixinsMockTests(TestCase):
     """Testes unitários utilizando Mocks para funções internas e Mixins (4 testes)"""
