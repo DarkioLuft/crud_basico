@@ -46,8 +46,8 @@ class ModelsUnitTests(TestCase):
         self.assertEqual(str(user), "Darkio")
 
     def test_02_receita_str_retorna_nome(self):
-       receita = Receita(nome="Torta de Maçã")
-       self.assertEqual(str(receita), "Torta de Maçã")
+        receita = Receita(nome="Torta de Maçã")
+        self.assertEqual(str(receita), "Torta de Maçã")
 
     @patch('crud.models.reverse')
     def test_03_receita_get_absolute_url_mock(self, mock_reverse):
