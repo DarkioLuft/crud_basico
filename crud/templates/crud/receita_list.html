@@ -5,7 +5,7 @@
 {% block content %}
 <div class="header-bar">
     <div>
-        <strong>Olá, {{ request.session.user_name }}! bom dia</strong>
+        <strong>Olá, {{ request.session.user_name }}! top!!</strong>
     </div>
     <form method="post" action="{% url 'logout' %}" style="margin: 0;">
         {% csrf_token %}
