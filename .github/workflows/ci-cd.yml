@@ -25,7 +25,6 @@ on:
           - homolog
           - prod
 
-# ── Permissões para publicar relatórios de teste no PR ──────
 permissions:
   checks: write
   contents: read
@@ -124,8 +123,6 @@ jobs:
 
   # ============================================================
   # JOB 2 — DEPLOY HOMOLOGAÇÃO
-  # Roda após testes passarem, apenas em push na main
-  # ou dispatch manual com target=homolog
   # ============================================================
   deploy-homolog:
     name: "🟡 Deploy Homologação"
@@ -140,27 +137,36 @@ jobs:
       - name: "📥 Checkout do código"
         uses: actions/checkout@v4
 
+      # ── CORREÇÃO: gera o .env aqui, pois ele está no .gitignore ──
+      - name: "🔐 Gerar .env.homolog"
+        run: |
+          cat > .env.homolog << 'EOF'
+          DEBUG=True
+          SECRET_KEY=chave-secreta-homologacao
+          ALLOWED_HOSTS=*
+          DB_NAME=homolog_db
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_HOST=db_homolog
+          DB_PORT=5432
+          WEB_PORT=8001
+          EOF
+          # Remove espaços iniciais que o heredoc do YAML adiciona
+          sed -i 's/^[[:space:]]*//' .env.homolog
+
       - name: "🐳 Build e deploy em Homologação"
         run: |
-          cd ${{ github.workspace }}
           docker compose -f docker-compose.homolog.yml --env-file .env.homolog down --remove-orphans || true
           docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
           echo "⏳ Aguardando containers estabilizarem..."
-          sleep 10
+          sleep 15
           docker compose -f docker-compose.homolog.yml --env-file .env.homolog ps
-
-      - name: "🌱 Executar seed de dados iniciais"
-        run: |
-          docker compose -f docker-compose.homolog.yml --env-file .env.homolog \
-            exec -T web_homolog python manage.py seed_data --noinput || true
 
       - name: "✅ Resumo"
         run: echo "🟡 Homologação atualizada com sucesso na porta 8001"
 
   # ============================================================
   # JOB 3 — DEPLOY PRODUÇÃO
-  # Só via dispatch manual com target=prod
-  # O environment "producao" exige aprovação manual no GitHub
   # ============================================================
   deploy-prod:
     name: "🟢 Deploy Produção"
@@ -174,10 +180,37 @@ jobs:
       - name: "📥 Checkout do código"
         uses: actions/checkout@v4
 
+      # ── CORREÇÃO: gera os .env aqui ──
+      - name: "🔐 Gerar arquivos .env"
+        run: |
+          cat > .env.homolog << 'EOF'
+          DEBUG=True
+          SECRET_KEY=chave-secreta-homologacao
+          ALLOWED_HOSTS=*
+          DB_NAME=homolog_db
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_HOST=db_homolog
+          DB_PORT=5432
+          WEB_PORT=8001
+          EOF
+          sed -i 's/^[[:space:]]*//' .env.homolog
+
+          cat > .env.prod << 'EOF'
+          DEBUG=False
+          SECRET_KEY=chave-secreta-producao-super-segura
+          ALLOWED_HOSTS=*
+          DB_NAME=prod_db
+          DB_USER=postgres
+          DB_PASSWORD=postgres
+          DB_HOST=db_prod
+          DB_PORT=5432
+          WEB_PORT=8000
+          EOF
+          sed -i 's/^[[:space:]]*//' .env.prod
+
       - name: "🐳 Promover para Produção"
         run: |
-          cd ${{ github.workspace }}
-
           # Garante que a imagem de homolog existe
           if ! docker image inspect crud_basico:homolog > /dev/null 2>&1; then
             echo "⚠️ Imagem de homolog não encontrada. Construindo..."
@@ -191,13 +224,8 @@ jobs:
           docker compose -f docker-compose.prod.yml --env-file .env.prod down --remove-orphans || true
           docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
           echo "⏳ Aguardando containers estabilizarem..."
-          sleep 10
+          sleep 15
           docker compose -f docker-compose.prod.yml --env-file .env.prod ps
-
-      - name: "🌱 Executar seed de dados iniciais"
-        run: |
-          docker compose -f docker-compose.prod.yml --env-file .env.prod \
-            exec -T web_prod python manage.py seed_data --noinput || true
 
       - name: "✅ Resumo"
         run: echo "🟢 Produção atualizada com sucesso na porta 8000"
