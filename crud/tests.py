@@ -68,7 +68,7 @@ class HelpersAndMixinsMockTests(TestCase):
         self.factory = RequestFactory()
 
     def test_05_get_current_user_sem_sessao(self):
-       request = self.factory.get('/')
+        request = self.factory.get('/')
         request.session = {}
         self.assertIsNone(_get_current_user(request))
 
