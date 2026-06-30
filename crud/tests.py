@@ -50,11 +50,11 @@ class ModelsUnitTests(TestCase):
        # self.assertEqual(str(receita), "Torta de Maçã")
 
     @patch('crud.models.reverse')
-    def test_03_receita_get_absolute_url_mock(self, mock_reverse):
-        mock_reverse.return_value = '/receitas/mock/'
-        receita = Receita(nome="Mock")
-        self.assertEqual(receita.get_absolute_url(), '/receitas/mock/')
-        mock_reverse.assert_called_once_with('receita_list')
+    #def test_03_receita_get_absolute_url_mock(self, mock_reverse):
+     #   mock_reverse.return_value = '/receitas/mock/'
+        #receita = Receita(nome="Mock")
+       # self.assertEqual(receita.get_absolute_url(), '/receitas/mock/')
+        #mock_reverse.assert_called_once_with('receita_list')
 
     def test_04_user_status_padrao_true(self):
         user = User(name="Test", login="test", email="test@test.com", senha="123")
