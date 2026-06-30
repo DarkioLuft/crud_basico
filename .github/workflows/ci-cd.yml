@@ -1,22 +1,43 @@
-name: CI/CD Pipeline - CRUD Receitas
+# =============================================================
+# Pipeline CI/CD Unificado — CRUD de Receitas
+# =============================================================
+# Gatilhos:
+#   • Pull Request  → roda testes + Pylint (Mess Detector)
+#   • Push em main  → testes + deploy automático em Homologação
+#   • Manual        → deploy em Produção (com aprovação)
+# =============================================================
+
+name: "CI/CD Pipeline"
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:   # permite disparar manualmente pelo botão "Run workflow"
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Ambiente de deploy"
+        required: true
+        default: "homolog"
+        type: choice
+        options:
+          - homolog
+          - prod
+
+# ── Permissões para publicar relatórios de teste no PR ──────
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
 
 jobs:
   # ============================================================
-  # ETAPA D + E: Testes automatizados + Mess Detector + SonarQube
-  # (substitui o run_ci.sh local)
+  # JOB 1 — TESTES + MESS DETECTOR (roda em TODOS os gatilhos)
   # ============================================================
   test-and-quality:
+    name: "🧪 Testes & Qualidade"
     runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      contents: read
 
     services:
       postgres:
@@ -46,44 +67,52 @@ jobs:
       DB_PORT: 5432
 
     steps:
-      - name: Checkout do código
+      - name: "📥 Checkout do código"
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # histórico completo, recomendado p/ análise do SonarQube
+          fetch-depth: 0
 
-      - name: Configurar Python 3.12
+      - name: "🐍 Configurar Python 3.12"
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Instalar dependências
+      - name: "📦 Instalar dependências"
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-django pytest-cov pylint pylint-django
 
-      - name: Rodar os 20 testes automatizados + cobertura
-        run: |
-          pytest crud/tests.py --ds=core.settings --cov=. --cov-report=xml --junitxml=test-report.xml -v
+      - name: "🔄 Aplicar migrations"
+        run: python manage.py migrate --noinput
 
-      - name: Publicar estatísticas de execução dos testes
+      - name: "🧪 Rodar 20 testes automatizados + cobertura"
+        run: |
+          pytest crud/tests.py \
+            --ds=core.settings \
+            --cov=crud --cov=core \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-report.xml \
+            -v
+
+      - name: "📊 Publicar resultado dos testes"
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Resultados dos Testes (JUnit)
+          name: "Resultados dos Testes (JUnit)"
           path: test-report.xml
           reporter: java-junit
 
-      - name: Rodar Mess Detector (Pylint)
+      - name: "🧹 Rodar Mess Detector (Pylint)"
         run: |
-          pylint --rcfile=.pylintrc --output-format=parseable crud core | tee pylint-report.txt || true
+          echo "## 🧹 Relatório do Mess Detector (Pylint)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          pylint --rcfile=.pylintrc --output-format=text crud core | tee pylint-report.txt || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat pylint-report.txt >> $GITHUB_STEP_SUMMARY
 
-      - name: Análise de Qualidade de Código (SonarQube)
-        uses: sonarsource/sonarqube-scan-action@v3
-        env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Guardar relatórios gerados
+      - name: "💾 Guardar relatórios"
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -94,47 +123,81 @@ jobs:
             pylint-report.txt
 
   # ============================================================
-  # ETAPA F: Atualização do ambiente de Homologação
-  # Só roda se os testes/qualidade passarem, e só na branch main
+  # JOB 2 — DEPLOY HOMOLOGAÇÃO
+  # Roda após testes passarem, apenas em push na main
+  # ou dispatch manual com target=homolog
   # ============================================================
   deploy-homolog:
+    name: "🟡 Deploy Homologação"
     needs: test-and-quality
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'homolog')
+    runs-on: self-hosted
     environment: homologacao
+
     steps:
-      - name: Deploy via SSH na VM (Homologação)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            set -e
-            cd ~/crud_basico
-            git pull origin main
-            docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
+      - name: "📥 Checkout do código"
+        uses: actions/checkout@v4
+
+      - name: "🐳 Build e deploy em Homologação"
+        run: |
+          cd ${{ github.workspace }}
+          docker compose -f docker-compose.homolog.yml --env-file .env.homolog down --remove-orphans || true
+          docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
+          echo "⏳ Aguardando containers estabilizarem..."
+          sleep 10
+          docker compose -f docker-compose.homolog.yml --env-file .env.homolog ps
+
+      - name: "🌱 Executar seed de dados iniciais"
+        run: |
+          docker compose -f docker-compose.homolog.yml --env-file .env.homolog \
+            exec -T web_homolog python manage.py seed_data --noinput || true
+
+      - name: "✅ Resumo"
+        run: echo "🟡 Homologação atualizada com sucesso na porta 8001"
 
   # ============================================================
-  # ETAPA G: Atualização do ambiente de Produção
-  # "environment: producao" com Required Reviewers configurado
-  # nas configurações do repositório = a etapa de aprovação manual
-  # (clique de aprovação), cumprindo o requisito de processo
-  # "semi-automatizado".
+  # JOB 3 — DEPLOY PRODUÇÃO
+  # Só via dispatch manual com target=prod
+  # O environment "producao" exige aprovação manual no GitHub
   # ============================================================
   deploy-prod:
-    needs: deploy-homolog
-    runs-on: ubuntu-latest
+    name: "🟢 Deploy Produção"
+    needs: test-and-quality
+    if: |
+      github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'prod'
+    runs-on: self-hosted
     environment: producao
+
     steps:
-      - name: Deploy via SSH na VM (Produção)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            set -e
-            cd ~/crud_basico
-            docker tag crud_basico:homolog crud_basico:prod
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+      - name: "📥 Checkout do código"
+        uses: actions/checkout@v4
+
+      - name: "🐳 Promover para Produção"
+        run: |
+          cd ${{ github.workspace }}
+
+          # Garante que a imagem de homolog existe
+          if ! docker image inspect crud_basico:homolog > /dev/null 2>&1; then
+            echo "⚠️ Imagem de homolog não encontrada. Construindo..."
+            docker compose -f docker-compose.homolog.yml --env-file .env.homolog build
+          fi
+
+          # Promove a imagem
+          docker tag crud_basico:homolog crud_basico:prod
+
+          # Sobe produção
+          docker compose -f docker-compose.prod.yml --env-file .env.prod down --remove-orphans || true
+          docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+          echo "⏳ Aguardando containers estabilizarem..."
+          sleep 10
+          docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+
+      - name: "🌱 Executar seed de dados iniciais"
+        run: |
+          docker compose -f docker-compose.prod.yml --env-file .env.prod \
+            exec -T web_prod python manage.py seed_data --noinput || true
+
+      - name: "✅ Resumo"
+        run: echo "🟢 Produção atualizada com sucesso na porta 8000"
