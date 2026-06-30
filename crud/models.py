@@ -8,8 +8,7 @@ class User(models.Model):
     login = models.CharField(max_length=50, unique=True)
     senha = models.CharField(max_length=128)
     email = models.EmailField(max_length=254, unique=True)
-    status = models.BooleanField(default=True)
-    
+    status = models.BooleanField(default=True) 
 
     def __str__(self):
         return self.name
@@ -41,3 +40,4 @@ class Receita(models.Model):
 
     def get_absolute_url(self):
         return reverse('receita_list')
+        

@@ -149,6 +149,8 @@ jobs:
           DB_HOST=db_homolog
           DB_PORT=5432
           WEB_PORT=8001
+          SESSION_COOKIE_NAME=sessionid_homolog
+          CSRF_COOKIE_NAME=csrftoken_homolog
           EOF
           sed -i 's/^[[:space:]]*//' .env.homolog
 
@@ -190,6 +192,8 @@ jobs:
           DB_HOST=db_prod
           DB_PORT=5432
           WEB_PORT=8000
+          SESSION_COOKIE_NAME=sessionid_prod
+          CSRF_COOKIE_NAME=csrftoken_prod
           EOF
           sed -i 's/^[[:space:]]*//' .env.prod
 

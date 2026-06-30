@@ -33,6 +33,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=db_homolog
       - DB_PORT=5432
+      - SESSION_COOKIE_NAME=sessionid_homolog
+      - CSRF_COOKIE_NAME=csrftoken_homolog
     ports:
       - "${WEB_PORT}:8000"
 
