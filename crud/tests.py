@@ -137,7 +137,7 @@ class AuthViewsTests(TestCase):
 
 """
 class ReceitasViewsTests(TestCase):
-    """Testes das rotas de Receitas com isolamento de usuário (4 testes)"""
+    Testes das rotas de Receitas com isolamento de usuário (4 testes)
 
     def setUp(self):
         self.client = Client()
@@ -177,16 +177,16 @@ class ReceitasViewsTests(TestCase):
 # =====================================================================
 
 class DatabaseLoadTests(TransactionTestCase):
-    """
+    
     Testes de performance utilizando TransactionTestCase para garantir 
     que as transações em massa reflitam a realidade do banco de dados.
-    """
+    
     
     def setUp(self):
         self.user = criar_usuario(login="loadtest", email="load@test.com")
 
     def test_18_bulk_insert_100k_registros(self):
-        """Teste de Carga 1: Escrita massiva no banco de dados com bulk_create."""
+        Teste de Carga 1: Escrita massiva no banco de dados com bulk_create.
         receitas_para_inserir = [
             Receita(
                 user=self.user,
@@ -207,7 +207,7 @@ class DatabaseLoadTests(TransactionTestCase):
         self.assertLess(duration, 15.0, f"O insert demorou muito: {duration:.2f}s")
 
     def test_19_stress_filtros_complexos_50k(self):
-        """Teste de Carga 2: Leitura e scan de tabela completa sem índices (Seq Scan)."""
+        Teste de Carga 2: Leitura e scan de tabela completa sem índices (Seq Scan).
         receitas = [
             Receita(
                 user=self.user, nome=f"R {i}", descricao="D",
@@ -233,7 +233,7 @@ class DatabaseLoadTests(TransactionTestCase):
         self.assertLess(duration, 2.0, f"A leitura da tabela demorou muito: {duration:.2f}s.")
 
     def test_20_simulacao_concorrencia_e_io(self):
-        """Teste de Carga 3: I/O de múltiplas queries sequenciais via Foreign Key."""
+        Teste de Carga 3: I/O de múltiplas queries sequenciais via Foreign Key.
         users = [User(name=f"U{i}", login=f"u{i}", email=f"u{i}@x.com", senha="1") for i in range(500)]
         User.objects.bulk_create(users)
         
@@ -256,4 +256,4 @@ class DatabaseLoadTests(TransactionTestCase):
         
         # Este teste avalia o tempo de round-trip do banco de dados (Gargalo de I/O)
         self.assertLess(duration, 5.0, f"Tempo de I/O do banco excedeu o limite: {duration:.2f}s.")
-        ""
+        """
