@@ -255,3 +255,4 @@ class DatabaseLoadTests(TransactionTestCase):
         
         # Este teste avalia o tempo de round-trip do banco de dados (Gargalo de I/O)
         self.assertLess(duration, 5.0, f"Tempo de I/O do banco excedeu o limite: {duration:.2f}s.")
+        
