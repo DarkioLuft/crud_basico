@@ -137,7 +137,6 @@ jobs:
       - name: "📥 Checkout do código"
         uses: actions/checkout@v4
 
-      # ── CORREÇÃO: gera o .env aqui, pois ele está no .gitignore ──
       - name: "🔐 Gerar .env.homolog"
         run: |
           cat > .env.homolog << 'EOF'
@@ -151,16 +150,15 @@ jobs:
           DB_PORT=5432
           WEB_PORT=8001
           EOF
-          # Remove espaços iniciais que o heredoc do YAML adiciona
           sed -i 's/^[[:space:]]*//' .env.homolog
 
       - name: "🐳 Build e deploy em Homologação"
         run: |
-          docker compose -f docker-compose.homolog.yml --env-file .env.homolog down --remove-orphans || true
-          docker compose -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
+          docker compose -p homolog -f docker-compose.homolog.yml --env-file .env.homolog down || true
+          docker compose -p homolog -f docker-compose.homolog.yml --env-file .env.homolog up -d --build
           echo "⏳ Aguardando containers estabilizarem..."
           sleep 15
-          docker compose -f docker-compose.homolog.yml --env-file .env.homolog ps
+          docker compose -p homolog -f docker-compose.homolog.yml --env-file .env.homolog ps
 
       - name: "✅ Resumo"
         run: echo "🟡 Homologação atualizada com sucesso na porta 8001"
@@ -180,22 +178,8 @@ jobs:
       - name: "📥 Checkout do código"
         uses: actions/checkout@v4
 
-      # ── CORREÇÃO: gera os .env aqui ──
-      - name: "🔐 Gerar arquivos .env"
+      - name: "🔐 Gerar .env.prod"
         run: |
-          cat > .env.homolog << 'EOF'
-          DEBUG=True
-          SECRET_KEY=chave-secreta-homologacao
-          ALLOWED_HOSTS=*
-          DB_NAME=homolog_db
-          DB_USER=postgres
-          DB_PASSWORD=postgres
-          DB_HOST=db_homolog
-          DB_PORT=5432
-          WEB_PORT=8001
-          EOF
-          sed -i 's/^[[:space:]]*//' .env.homolog
-
           cat > .env.prod << 'EOF'
           DEBUG=False
           SECRET_KEY=chave-secreta-producao-super-segura
@@ -209,23 +193,13 @@ jobs:
           EOF
           sed -i 's/^[[:space:]]*//' .env.prod
 
-      - name: "🐳 Promover para Produção"
+      - name: "🐳 Build e deploy em Produção"
         run: |
-          # Garante que a imagem de homolog existe
-          if ! docker image inspect crud_basico:homolog > /dev/null 2>&1; then
-            echo "⚠️ Imagem de homolog não encontrada. Construindo..."
-            docker compose -f docker-compose.homolog.yml --env-file .env.homolog build
-          fi
-
-          # Promove a imagem
-          docker tag crud_basico:homolog crud_basico:prod
-
-          # Sobe produção
-          docker compose -f docker-compose.prod.yml --env-file .env.prod down --remove-orphans || true
-          docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+          docker compose -p prod -f docker-compose.prod.yml --env-file .env.prod down || true
+          docker compose -p prod -f docker-compose.prod.yml --env-file .env.prod up -d --build
           echo "⏳ Aguardando containers estabilizarem..."
           sleep 15
-          docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+          docker compose -p prod -f docker-compose.prod.yml --env-file .env.prod ps
 
       - name: "✅ Resumo"
         run: echo "🟢 Produção atualizada com sucesso na porta 8000"
