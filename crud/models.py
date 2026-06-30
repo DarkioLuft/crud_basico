@@ -34,8 +34,10 @@ class Receita(models.Model):
     custo = models.DecimalField(max_digits=10, decimal_places=2)
     tipo_receita = models.CharField(max_length=50, choices=TIPO_CHOICES)
     #porcoes = models.PositiveIntegerField(default=1, verbose_name='Porções')
+class teste(models.Model):
+    id_teste = models.AutoField(primary_key=True)
+    nome = models.CharField(max_length=100)
 
-    
 
     def __str__(self):
         return self.nome
